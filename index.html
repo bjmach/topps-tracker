@@ -26,23 +26,18 @@
 </head>
 <body>
   <div id="root"></div>
-
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-
   <script type="text/babel">
     const { useState, useEffect, useCallback, useRef } = React;
-
-    // ── Config ────────────────────────────────────────────────────────────────
     const SUPABASE_URL = "https://mkmtyasbdhxgcfkrwave.supabase.co";
     const SUPABASE_KEY = "sb_publishable_XMLWaBASozx8VRO8P7aUEQ_kzh3EMw9";
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-    const PACK_BUDGET   = 50;
+    const PACK_BUDGET = 50;
     const SINGLES_BUDGET = 300;
-    const RESET_DAY     = 18;
+    const RESET_DAY = 18;
     const APPS = ["marvel","mlb","nfl","nba","starwars","disney"];
     const APP_LABELS = { marvel:"Marvel", mlb:"MLB Bunt", nfl:"NFL", nba:"NBA Collect", starwars:"Star Wars", disney:"Disney" };
     const APP_ICONS  = { marvel:"M", mlb:"MLB", nfl:"NFL", nba:"NBA", starwars:"SW", disney:"D" };
@@ -54,8 +49,6 @@
       starwars: { primary:"#ffe81f", secondary:"#555",    text:"#333" },
       disney:   { primary:"#1a6eb5", secondary:"#00a8e0", text:"#fff" },
     };
-
-    // ── Period logic ──────────────────────────────────────────────────────────
     function getPeriodKey(offset = 0) {
       const now = new Date();
       let y = now.getFullYear(), m = now.getMonth();
@@ -65,7 +58,6 @@
       while (m < 0)  { m += 12; y--; }
       return `${y}_${m}`;
     }
-
     function periodLabel(offset = 0) {
       const key = getPeriodKey(offset);
       const [y, m] = key.split("_").map(Number);
@@ -74,33 +66,28 @@
       const fmt = d => d.toLocaleDateString("en-US", { month:"short", day:"numeric" });
       return `${fmt(new Date(y, m, RESET_DAY))} – ${fmt(new Date(endY, endM, RESET_DAY - 1))}`;
     }
-
-    // ── Rollover ──────────────────────────────────────────────────────────────
     function calcPackRollover(app, currentOffset, allData) {
       let rollover = 0;
       for (let i = 24; i >= 1; i--) {
         const key = getPeriodKey(currentOffset - i);
         const period = allData[key];
         if (!period || !period[`pack_${app}`]) continue;
-        const spent = period[`pack_${app}`].reduce((s,t) => s + t.amount, 0);
+        const spent = period[`pack_${app}`].reduce((s,t) => s+t.amount, 0);
         rollover = Math.max(0, PACK_BUDGET + rollover - spent);
       }
       return rollover;
     }
-
     function calcSinglesRollover(currentOffset, allData) {
       let rollover = 0;
       for (let i = 24; i >= 1; i--) {
         const key = getPeriodKey(currentOffset - i);
         const period = allData[key];
         if (!period || !period.singles) continue;
-        const spent = period.singles.reduce((s,t) => s + t.amount, 0);
+        const spent = period.singles.reduce((s,t) => s+t.amount, 0);
         rollover = Math.max(0, SINGLES_BUDGET + rollover - spent);
       }
       return rollover;
     }
-
-    // ── Helpers ───────────────────────────────────────────────────────────────
     const fmt = v => v >= 0 ? `$${v.toFixed(2)}` : `-$${Math.abs(v).toFixed(2)}`;
     function guiltEmoji(pct) {
       if (pct === 0) return "😌"; if (pct < 30) return "🙂";
@@ -108,8 +95,6 @@
       if (pct < 100) return "😰"; return "😱";
     }
     const todayStr = () => new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" });
-
-    // ── Sub-components ────────────────────────────────────────────────────────
     function ProgressBar({ pct, color, over }) {
       return (
         <div style={{ height:5, background:"#1e1e2e", borderRadius:99, overflow:"hidden", marginBottom:12 }}>
@@ -117,7 +102,6 @@
         </div>
       );
     }
-
     function TxRow({ tx, onDelete, showApp }) {
       const [hover, setHover] = useState(false);
       return (
@@ -131,7 +115,6 @@
         </div>
       );
     }
-
     function AppCard({ app, packData, onAddPack, onDeletePack, rollover }) {
       const [amt, setAmt] = useState(""), [note, setNote] = useState("");
       const [hov, setHov] = useState(false);
@@ -142,14 +125,12 @@
       const pct = (spent / available) * 100;
       const over = spent > available;
       const remColor = over||pct>=85 ? "#f87171" : pct>=60 ? "#fbbf24" : "#4ade80";
-
       const handleAdd = () => {
         const a = parseFloat(amt);
         if (!a || a <= 0) return;
         onAddPack(app, a, note.trim() || "Pack spend");
         setAmt(""); setNote("");
       };
-
       return (
         <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
           style={{ background:"#12121a", border:"1px solid #1e1e2e", borderRadius:16, padding:"1.25rem", position:"relative", overflow:"hidden", transition:"transform 0.2s", transform: hov?"translateY(-2px)":"translateY(0)" }}>
@@ -184,20 +165,19 @@
         </div>
       );
     }
-
-    // ── Auth Screen ───────────────────────────────────────────────────────────
     function AuthScreen() {
       const [loading, setLoading] = useState(false), [err, setErr] = useState("");
-
       const handleGoogle = async () => {
         setLoading(true); setErr("");
         const { error } = await sb.auth.signInWithOAuth({
           provider: "google",
-          options: { redirectTo: window.location.href }
+          options: {
+            redirectTo: "https://bjmach.github.io/topps-tracker",
+            queryParams: { access_type: "offline", prompt: "consent" }
+          }
         });
         if (error) { setErr(error.message); setLoading(false); }
       };
-
       return (
         <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", padding:"2rem",
           backgroundImage:"radial-gradient(ellipse at 20% 0%,rgba(230,36,41,0.07) 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,rgba(129,140,248,0.07) 0%,transparent 50%)" }}>
@@ -222,8 +202,6 @@
         </div>
       );
     }
-
-    // ── Main App ──────────────────────────────────────────────────────────────
     function App() {
       const [session, setSession] = useState(null);
       const [authLoading, setAuthLoading] = useState(true);
@@ -233,15 +211,29 @@
       const [saving, setSaving] = useState(false);
       const [singlesAmt, setSinglesAmt] = useState(""), [singlesApp, setSinglesApp] = useState("marvel"), [singlesNote, setSinglesNote] = useState("");
       const saveTimer = useRef(null);
-
-      // Auth
       useEffect(() => {
-        sb.auth.getSession().then(({ data: { session } }) => { setSession(session); setAuthLoading(false); });
-        const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => { setSession(session); setAuthLoading(false); });
+        const handleRedirect = async () => {
+          const hash = window.location.hash;
+          if (hash && (hash.includes("access_token") || hash.includes("error"))) {
+            const { data, error } = await sb.auth.getSessionFromUrl({ storeSession: true });
+            if (data?.session) {
+              setSession(data.session);
+              setAuthLoading(false);
+              window.history.replaceState(null, "", window.location.pathname);
+              return;
+            }
+          }
+          const { data: { session } } = await sb.auth.getSession();
+          setSession(session);
+          setAuthLoading(false);
+        };
+        handleRedirect();
+        const { data: { subscription } } = sb.auth.onAuthStateChange((_e, session) => {
+          setSession(session);
+          setAuthLoading(false);
+        });
         return () => subscription.unsubscribe();
       }, []);
-
-      // Load data
       useEffect(() => {
         if (!session) return;
         setDataLoading(true);
@@ -251,8 +243,6 @@
             setDataLoading(false);
           }).catch(() => setDataLoading(false));
       }, [session]);
-
-      // Save with debounce
       const persist = useCallback(async (newData) => {
         if (!session) return;
         setSaving(true);
@@ -262,7 +252,6 @@
           setSaving(false);
         }, 600);
       }, [session]);
-
       const updatePeriod = (updater) => {
         const key = getPeriodKey(offset);
         const newAll = { ...allData };
@@ -271,11 +260,9 @@
         setAllData(newAll);
         persist(newAll);
       };
-
       const getPeriodData = () => allData[getPeriodKey(offset)] || {};
       const getPackData = app => (getPeriodData()[`pack_${app}`] || []);
       const getSinglesData = () => (getPeriodData().singles || []);
-
       const handleAddPack = (app, amt, note) => updatePeriod(p => {
         const k = `pack_${app}`; if (!p[k]) p[k] = [];
         p[k].unshift({ amount: amt, note, date: todayStr() });
@@ -287,48 +274,38 @@
         setSinglesAmt(""); setSinglesNote("");
       };
       const handleDeleteSingle = i => updatePeriod(p => { if(p.singles) p.singles.splice(i,1); });
-
       if (authLoading) return (
         <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center" }}>
           <div className="spinner" />
         </div>
       );
-
       if (!session) return <AuthScreen />;
-
       if (dataLoading) return (
         <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:16 }}>
           <div className="spinner" />
           <p style={{ color:"#6b6b8a", fontSize:13 }}>Loading your collection…</p>
         </div>
       );
-
-      // Compute totals
       const singlesRollover = calcSinglesRollover(offset, allData);
       const singlesAvailable = SINGLES_BUDGET + singlesRollover;
       const singlesData = getSinglesData();
       const singlesSpent = singlesData.reduce((s,t) => s+t.amount, 0);
       const singlesRemaining = singlesAvailable - singlesSpent;
       const singlesPct = (singlesSpent / singlesAvailable) * 100;
-
       let totalPacksSpent = 0;
       const packRollovers = {};
       APPS.forEach(app => {
         packRollovers[app] = calcPackRollover(app, offset, allData);
         totalPacksSpent += getPackData(app).reduce((s,t) => s+t.amount, 0);
       });
-
       const totalSpent = totalPacksSpent + singlesSpent;
       const totalBudget = (PACK_BUDGET * 6) + singlesAvailable;
       const totalRemaining = totalBudget - totalSpent;
       const totalPct = (totalSpent / totalBudget) * 100;
       const remColor = totalRemaining < 0 ? "#f87171" : totalPct > 85 ? "#fbbf24" : "#4ade80";
-
       return (
         <div style={{ minHeight:"100vh", background:"#0a0a0f", color:"#e8e8f0", fontFamily:"'DM Sans',sans-serif", padding:"2rem 1rem",
           backgroundImage:"radial-gradient(ellipse at 20% 0%,rgba(230,36,41,0.07) 0%,transparent 50%),radial-gradient(ellipse at 80% 100%,rgba(129,140,248,0.07) 0%,transparent 50%)" }}>
-
-          {/* Header */}
           <div style={{ textAlign:"center", marginBottom:"1.5rem" }}>
             <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:"clamp(2.5rem,8vw,4rem)", letterSpacing:"0.05em", lineHeight:1,
               background:"linear-gradient(135deg,#fff 0%,#6b6b8a 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>Pack Tracker</h1>
@@ -338,8 +315,6 @@
               <button onClick={() => sb.auth.signOut()} style={{ background:"none", border:"1px solid #1e1e2e", color:"#6b6b8a", borderRadius:6, padding:"3px 10px", fontSize:11, cursor:"pointer" }}>Sign out</button>
             </div>
           </div>
-
-          {/* Period nav */}
           <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:16, marginBottom:"2rem" }}>
             <button onClick={()=>setOffset(o=>o-1)} style={{ background:"#12121a", border:"1px solid #1e1e2e", color:"#e8e8f0", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>‹</button>
             <div style={{ textAlign:"center" }}>
@@ -348,8 +323,6 @@
             </div>
             <button onClick={()=>setOffset(o=>o+1)} style={{ background:"#12121a", border:"1px solid #1e1e2e", color:"#e8e8f0", width:36, height:36, borderRadius:"50%", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>›</button>
           </div>
-
-          {/* Singles Pool */}
           <div style={{ maxWidth:1100, margin:"0 auto 0.75rem", fontSize:11, color:"#6b6b8a", letterSpacing:"0.15em", textTransform:"uppercase", display:"flex", alignItems:"center", gap:10 }}>
             Singles Budget — Shared Pool <div style={{ flex:1, height:1, background:"#1e1e2e" }} />
           </div>
@@ -394,16 +367,12 @@
                 : singlesData.map((t,i) => <TxRow key={i} tx={t} onDelete={()=>handleDeleteSingle(i)} showApp />)}
             </div>
           </div>
-
-          {/* Pack Cards */}
           <div style={{ maxWidth:1100, margin:"0 auto 0.75rem", fontSize:11, color:"#6b6b8a", letterSpacing:"0.15em", textTransform:"uppercase", display:"flex", alignItems:"center", gap:10 }}>
             Pack Ripping — $50 Per App <div style={{ flex:1, height:1, background:"#1e1e2e" }} />
           </div>
           <div style={{ maxWidth:1100, margin:"0 auto 2rem", display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(290px,1fr))", gap:"1.25rem" }}>
             {APPS.map(app => <AppCard key={app} app={app} packData={getPackData(app)} onAddPack={handleAddPack} onDeletePack={handleDeletePack} rollover={packRollovers[app]} />)}
           </div>
-
-          {/* Summary */}
           <div style={{ maxWidth:1100, margin:"0 auto", background:"#12121a", border:"1px solid #1e1e2e", borderRadius:16, padding:"1.25rem 1.5rem", display:"flex", alignItems:"center", justifyContent:"space-around", flexWrap:"wrap", gap:16 }}>
             {[{ val:fmt(totalPacksSpent), lbl:"Packs Spent" }, { val:fmt(singlesSpent), lbl:"Singles Spent" }, { val:fmt(totalSpent), lbl:"Total Spent" }, { val:fmt(totalRemaining), lbl:"Total Remaining", color:remColor }].map(({val,lbl,color})=>(
               <div key={lbl} style={{ textAlign:"center" }}>
@@ -416,12 +385,10 @@
               <div style={{ fontSize:10, color:"#6b6b8a", textTransform:"uppercase", letterSpacing:"0.12em", marginTop:2 }}>Guilt Meter</div>
             </div>
           </div>
-
           <p style={{ textAlign:"center", color:"#2a2a3e", fontSize:10, marginTop:"1.5rem" }}>Signed in as {session.user.email}</p>
         </div>
       );
     }
-
     ReactDOM.createRoot(document.getElementById("root")).render(<App />);
   </script>
 </body>
